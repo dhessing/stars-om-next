@@ -8,12 +8,12 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
                  [sablono "0.3.6"]
-                 [org.omcljs/om "0.9.0"]]
+                 [org.omcljs/om "0.9.0"]
+                 [figwheel-sidecar "0.5.0-3"]]
 
-  :plugins [[lein-cljsbuild "1.1.1"]
-            [lein-figwheel "0.5.0-3"]]
+  :plugins [[lein-cljsbuild "1.1.1"]]
 
-  :source-paths ["src"]
+  :source-paths ["src" "script"]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
@@ -60,7 +60,7 @@
              ;; #! /bin/sh
              ;; emacsclient -n +$2 $1
              ;;
-             ;; :open-file-command "myfile-opener"
+             :open-file-command "open-with-intellij"
 
              ;; if you want to disable the REPL
              ;; :repl false
