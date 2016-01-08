@@ -1,14 +1,11 @@
 (ns stars.core
   (:require [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
-            [om.dom :as dom]))
+            [om.dom :as dom]
+            [sablono.core :as html :refer-macros [html]]))
 
-(def app-state
-  (atom
-    {:app/title "Animals"
-     :animals/list
-                [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
-                 [6 "Lion"] [7 "Mouse"] [8 "Monkey"] [9 "Snake"] [10 "Zebra"]]}))
+(defonce app-state
+  {:app/title "Hello World!"})
 
 (defmulti read (fn [env key params] key))
 
@@ -19,27 +16,14 @@
       {:value value}
       {:value :not-found})))
 
-(defmethod read :animals/list
-  [{:keys [state] :as env} key {:keys [start end]}]
-  {:value (subvec (:animals/list @state) start end)})
-
-(defui AnimalsList
-  static om/IQueryParams
-  (params [this]
-    {:start 0 :end 10})
+(defui RootView
   static om/IQuery
   (query [this]
-    '[:app/title (:animals/list {:start ?start :end ?end})])
+    '[:app/title])
   Object
   (render [this]
-    (let [{:keys [app/title animals/list]} (om/props this)]
-      (dom/div nil
-        (dom/h2 nil title)
-        (apply dom/ul nil
-          (map
-            (fn [[i name]]
-              (dom/li nil (str i ". " name)))
-            list))))))
+    (let [{:keys [app/title]} (om/props this)]
+      (html [:h1 title]))))
 
 (def reconciler
   (om/reconciler
@@ -47,4 +31,4 @@
      :parser (om/parser {:read read})}))
 
 (om/add-root! reconciler
-  AnimalsList (gdom/getElement "app"))
+  RootView (gdom/getElement "app"))

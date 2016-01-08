@@ -8,8 +8,12 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
                  [sablono "0.5.3"]
+                 [cljsjs/react-dom-server "0.14.3-0"]
                  [org.omcljs/om "1.0.0-alpha28"]
-                 [figwheel-sidecar "0.5.0-3"]]
+                 [figwheel-sidecar "0.5.0-3"]
+                 [compojure "1.4.0"]
+                 [ring-webjars "0.1.1"]
+                 [org.webjars/bootstrap "4.0.0-alpha.2"]]
 
   :plugins [[lein-cljsbuild "1.1.1"]]
 
@@ -51,7 +55,7 @@
              ;; if you want to embed a ring handler into the figwheel http-kit
              ;; server, this is for simple ring servers, if this
              ;; doesn't work for you just run your own server :)
-             ;; :ring-handler hello_world.server/handler
+             :ring-handler server/handler
 
              ;; To be able to open files in your editor from the heads up display
              ;; you will need to put a script on your path.
