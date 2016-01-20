@@ -2,20 +2,20 @@
   (:require [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
+            [datascript.core :as d]
             [sablono.core :as html :refer-macros [html]]))
 
 (enable-console-print!)
-
 
 ;; Components
 
 (defui SetupScreen
   static om/IQuery
   (query [this]
-    [:app/players])
+    [:game/players])
   Object
   (render [this]
-    (let [{:keys [:app/players]} (om/props this)]
+    (let [{:keys [:game/players]} (om/props this)]
       (html
         [:div
          [:h1 "Players"]
@@ -52,52 +52,40 @@
 (defui RootView
   static om/IQuery
   (query [this]
-    [:app/screen])
+    [{:app/root [:app/screen]}])
   Object
   (render [this]
-    (let [{:keys [:app/screen] :as env} (om/props this)
+    (print (om/props this))
+    (let [{:keys [:app/screen] :as entity} (get-in (om/props this) [:app/root 0])
           screen-env (or (om/get-query screen) [])
           screen (om/factory screen)]
-      (om/set-query! this {:query (vec (concat [:app/screen] screen-env))})
-      (screen (select-keys env screen-env)))))
-
-(defmulti screen-router identity)
-(defmethod screen-router :setup [] SetupScreen)
-(defmethod screen-router :game [] GameScreen)
-
+      (om/set-query! this {:query [{:app/root (vec (concat [:app/screen] screen-env))}]})
+      (screen entity))))
 
 ;; State
 
-(defonce app-state
-  (atom
-    {:app/screen   :setup
-     :player/by-id {0 {:id 0 :name "Dzjon"}
-                    1 {:id 1 :name "Heleen"}}}))
+(def conn (d/create-conn {}))
 
-(defmulti read (fn [env key params] key))
+(d/transact! conn
+  [{:db/id        -1
+    :app/title    "Stars"
+    :app/screen   SetupScreen
+    :game/players [{:id 0 :name "Dzjon"}
+                   {:id 1 :name "Heleen"}]}])
 
-(defmethod read :default
-  [{:keys [state] :as env} key params]
-  (let [st @state]
-    (if-let [[_ value] (find st key)]
-      {:value value}
-      {:value :not-found})))
 
-(defmethod read :app/screen
-  [{:keys [state] :as env} key params]
-  (let [st @state]
-    {:value (screen-router (:app/screen st))}))
+(defmulti read om/dispatch)
 
-(defmethod read :app/players
-  [{:keys [state] :as env} key params]
-  (let [st @state
-        players (for [[id player] (:player/by-id st)]
-                  player)]
-    {:value players}))
+(defmethod read :app/root
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?e :app/title]]
+            (d/db state) query)})
 
 (def reconciler
   (om/reconciler
-    {:state  app-state
+    {:state  conn
      :parser (om/parser {:read read})}))
 
 (om/add-root! reconciler

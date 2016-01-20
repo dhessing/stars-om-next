@@ -6,7 +6,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
-                 [org.clojure/core.async "0.2.374"]
+                 [datascript "0.13.1"]
                  [sablono "0.5.3"]
                  [cljsjs/react-dom-server "0.14.3-0"]
                  [org.omcljs/om "1.0.0-alpha28"]
