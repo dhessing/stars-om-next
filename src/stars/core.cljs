@@ -9,30 +9,41 @@
 
 ;; Components
 
+(defui SetupPlayer
+  static om/IQuery
+  (query [this]
+    [:player/name :db/id])
+  Object
+  (render [this]
+    (let [{:keys [:player/name :db/id]} (om/props this)]
+      (html
+        [:div.form-group.row {:key id}
+         [:label.form-control-label.col-xs-1 "Player "]
+         [:div.col-xs-8
+          [:input.form-control
+           {:type        "text"
+            :placeholder "Name"
+            :value       name
+            ;:on-change   #(om/transact! this `[(player/set-name ~props)])
+            }]]
+         [:button.btn.btn-danger.col-xs-1
+          ;{:on-click #(om/transact! this `[(player/remove ~props)])}
+          [:i.fa.fa-trash-o.fa-form]]]))))
+
+(def setup-player (om/factory SetupPlayer))
+
 (defui SetupScreen
   static om/IQuery
   (query [this]
-    [:game/players])
+    [{:app/players (om/get-query SetupPlayer)}])
   Object
   (render [this]
-    (let [{:keys [:game/players]} (om/props this)]
+    (let [{:keys [:app/players]} (om/props this)]
       (html
         [:div
          [:h1 "Players"]
          [:form
-          (for [{:keys [id name] :as player} players]
-            [:div.form-group.row {:key id}
-             [:label.form-control-label.col-xs-1 "Player "]
-             [:div.col-xs-8
-              [:input.form-control
-               {:type        "text"
-                :placeholder "Name"
-                :value       name
-                ;:on-change   #(om/transact! this `[(player/set-name ~props)])
-                }]]
-             [:button.btn.btn-danger.col-xs-1
-              ;{:on-click #(om/transact! this `[(player/remove ~props)])}
-              [:i.fa.fa-trash-o.fa-form]]])]
+          (map setup-player players)]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
            ;{:on-click #(om/transact! this `[(player/add ~props)])}
@@ -49,38 +60,44 @@
 
 ;; Router
 
-(defui RootView
+(defui StarsApp
   static om/IQuery
   (query [this]
-    [{:app/root [:app/screen]}])
+    [{:app/stars [:app/screen]}])
   Object
   (render [this]
-    (print (om/props this))
-    (let [{:keys [:app/screen] :as entity} (get-in (om/props this) [:app/root 0])
-          screen-env (or (om/get-query screen) [])
+    (let [{:keys [:app/screen] :as root} (get-in (om/props this) [:app/stars 0])
+          screen-query (or (om/get-query screen) [])
           screen (om/factory screen)]
-      (om/set-query! this {:query [{:app/root (vec (concat [:app/screen] screen-env))}]})
-      (screen entity))))
+      (om/set-query! this {:query (vec (concat [{:app/root [:app/screen]}] screen-query))})
+      (screen (om/props this)))))
 
 ;; State
 
 (def conn (d/create-conn {}))
 
 (d/transact! conn
-  [{:db/id        -1
-    :app/title    "Stars"
-    :app/screen   SetupScreen
-    :game/players [{:id 0 :name "Dzjon"}
-                   {:id 1 :name "Heleen"}]}])
+  [{:app/title  "Stars"
+    :app/screen SetupScreen}
+   {:player/name "Dzjon"}
+   {:player/name "Heleen"}
+   {:player/name "Sonny"}])
 
 
 (defmulti read om/dispatch)
 
-(defmethod read :app/root
+(defmethod read :app/stars
   [{:keys [state query]} _ _]
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
                  :where [?e :app/title]]
+            (d/db state) query)})
+
+(defmethod read :app/players
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?e :player/name]]
             (d/db state) query)})
 
 (def reconciler
@@ -89,4 +106,4 @@
      :parser (om/parser {:read read})}))
 
 (om/add-root! reconciler
-  RootView (gdom/getElement "app"))
+  StarsApp (gdom/getElement "app"))
