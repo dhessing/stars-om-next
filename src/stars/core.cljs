@@ -66,22 +66,24 @@
     [{:app/stars [:app/screen]}])
   Object
   (render [this]
-    (let [{:keys [:app/screen] :as root} (get-in (om/props this) [:app/stars 0])
+    (let [{:keys [:app/screen] :as entity} (get-in (om/props this) [:app/stars 0])
           screen-query (or (om/get-query screen) [])
           screen (om/factory screen)]
-      (om/set-query! this {:query (vec (concat [{:app/root [:app/screen]}] screen-query))})
-      (screen (om/props this)))))
+      (om/set-query! this {:query (vec [{:app/stars (vec (concat [:app/screen] screen-query))}])})
+      (screen entity))))
 
 ;; State
 
-(def conn (d/create-conn {}))
+(def conn (d/create-conn {:app/players {:db/valueType   :db.type/ref
+                                        :db/cardinality :db.cardinality/many
+                                        :db/isComponent true}}))
 
 (d/transact! conn
-  [{:app/title  "Stars"
-    :app/screen SetupScreen}
-   {:player/name "Dzjon"}
-   {:player/name "Heleen"}
-   {:player/name "Sonny"}])
+  [{:app/title   "Stars"
+    :app/screen  SetupScreen
+    :app/players [{:player/name "Dzjon"}
+                  {:player/name "Heleen"}
+                  {:player/name "Sonny"}]}])
 
 
 (defmulti read om/dispatch)
@@ -91,13 +93,6 @@
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
                  :where [?e :app/title]]
-            (d/db state) query)})
-
-(defmethod read :app/players
-  [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector) ...]
-                 :in $ ?selector
-                 :where [?e :player/name]]
             (d/db state) query)})
 
 (def reconciler
