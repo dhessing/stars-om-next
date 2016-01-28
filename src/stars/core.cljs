@@ -38,6 +38,7 @@
     [{:app/players (om/get-query SetupPlayer)}])
   Object
   (render [this]
+    (print (-> this om/path))
     (let [{:keys [:app/players]} (om/props this)]
       (html
         [:div
@@ -46,11 +47,13 @@
           (map setup-player players)]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
-           ;{:on-click #(om/transact! this `[(player/add ~props)])}
+           {:on-click #(om/transact! this `[(players/add)])}
            "Add Player"]
           [:button.btn.btn-primary
            ;{:on-click #(swap! app-state assoc :screen :game)}
            "Done"]]]))))
+
+(def setup-screen (om/factory SetupScreen))
 
 (defui GameScreen
   Object
@@ -63,42 +66,52 @@
 (defui StarsApp
   static om/IQuery
   (query [this]
-    [{:app/stars [:app/screen]}])
+    [{:app/stars (om/get-query SetupScreen)}])
   Object
   (render [this]
-    (let [{:keys [:app/screen] :as entity} (get-in (om/props this) [:app/stars 0])
-          screen-query (or (om/get-query screen) [])
-          screen (om/factory screen)]
-      (om/set-query! this {:query (vec [{:app/stars (vec (concat [:app/screen] screen-query))}])})
-      (screen entity))))
+    (let [{:keys [:app/players] :as entity} (get-in (om/props this) [:app/stars 0])]
+      (setup-screen entity))))
 
 ;; State
 
-(def conn (d/create-conn {:app/players {:db/valueType   :db.type/ref
-                                        :db/cardinality :db.cardinality/many
-                                        :db/isComponent true}}))
+(def conn (d/create-conn {:app/players {:db/cardinality :db.cardinality/many
+                                        :db/valueType :db.type/ref}}))
 
 (d/transact! conn
-  [{:app/title   "Stars"
+  [{:db/id       -1
+    :app/title   "Stars"
     :app/screen  SetupScreen
-    :app/players [{:player/name "Dzjon"}
-                  {:player/name "Heleen"}
-                  {:player/name "Sonny"}]}])
+    :app/players [{:player/name "Player 1"}
+                  {:player/name "Player 2"}]}])
 
 
 (defmulti read om/dispatch)
 
 (defmethod read :app/stars
   [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector) ...]
+  {:value (d/q '[:find [(pull ?e ?selector)]
                  :in $ ?selector
                  :where [?e :app/title]]
             (d/db state) query)})
 
+(defmethod read :app/players
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?e :player/name]]
+            (d/db state) query)})
+
+
+(defmulti mutate om/dispatch)
+
+(defmethod mutate 'players/add
+  [{:keys [state]} _ _]
+  {:action (fn [] (d/transact! state [{:db/id 1 :app/players {:player/name ""}}]))})
+
 (def reconciler
   (om/reconciler
     {:state  conn
-     :parser (om/parser {:read read})}))
+     :parser (om/parser {:read read :mutate mutate})}))
 
 (om/add-root! reconciler
   StarsApp (gdom/getElement "app"))
