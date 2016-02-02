@@ -35,11 +35,10 @@
 (defui SetupScreen
   static om/IQuery
   (query [this]
-    [{:app/players (om/get-query SetupPlayer)}])
+    [:db/id {:app/players (om/get-query SetupPlayer)}])
   Object
   (render [this]
-    (print (-> this om/path))
-    (let [{:keys [:app/players]} (om/props this)]
+    (let [{:keys [:app/players] :as entity} (om/props this)]
       (html
         [:div
          [:h1 "Players"]
@@ -47,7 +46,7 @@
           (map setup-player players)]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
-           {:on-click #(om/transact! this `[(players/add)])}
+           {:on-click #(om/transact! this `[(players/add ~entity)])}
            "Add Player"]
           [:button.btn.btn-primary
            ;{:on-click #(swap! app-state assoc :screen :game)}
@@ -69,7 +68,7 @@
     [{:app/stars (om/get-query SetupScreen)}])
   Object
   (render [this]
-    (let [{:keys [:app/players] :as entity} (get-in (om/props this) [:app/stars 0])]
+    (let [entity (get-in (om/props this) [:app/stars 0])]
       (setup-screen entity))))
 
 ;; State
@@ -105,8 +104,8 @@
 (defmulti mutate om/dispatch)
 
 (defmethod mutate 'players/add
-  [{:keys [state]} _ _]
-  {:action (fn [] (d/transact! state [{:db/id 1 :app/players {:player/name ""}}]))})
+  [{:keys [state]} _ {:keys [:db/id] :as entity}]
+  {:action (fn [] (d/transact! state [{:db/id id :app/players {:player/name ""}}]))})
 
 (def reconciler
   (om/reconciler
