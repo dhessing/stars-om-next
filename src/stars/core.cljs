@@ -15,17 +15,18 @@
     [:player/name :db/id])
   Object
   (render [this]
-    (let [{:keys [:player/name :db/id]} (om/props this)]
+    (let [{:keys [:player/name :db/id] :as entity} (om/props this)]
       (html
-        [:div.form-group.row {:key id}
+        [:div.form-group.row
          [:label.form-control-label.col-xs-1 "Player "]
          [:div.col-xs-8
           [:input.form-control
            {:type        "text"
             :placeholder "Name"
             :value       name
-            ;:on-change   #(om/transact! this `[(player/set-name ~props)])
-            }]]
+            :on-change   (fn [e]
+                           (om/transact! this
+                             `[(players/set-name {:db/id ~id :player/name ~(.. e -target -value)})]))}]]
          [:button.btn.btn-danger.col-xs-1
           ;{:on-click #(om/transact! this `[(player/remove ~props)])}
           [:i.fa.fa-trash-o.fa-form]]]))))
@@ -93,19 +94,15 @@
                  :where [?e :app/title]]
             (d/db state) query)})
 
-(defmethod read :app/players
-  [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector) ...]
-                 :in $ ?selector
-                 :where [?e :player/name]]
-            (d/db state) query)})
-
-
 (defmulti mutate om/dispatch)
 
 (defmethod mutate 'players/add
   [{:keys [state]} _ {:keys [:db/id] :as entity}]
   {:action (fn [] (d/transact! state [{:db/id id :app/players {:player/name ""}}]))})
+
+(defmethod mutate 'players/set-name
+  [{:keys [state]} _ entity]
+  {:action (fn [] (d/transact! state [entity]))})
 
 (def reconciler
   (om/reconciler
