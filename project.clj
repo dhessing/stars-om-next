@@ -9,11 +9,12 @@
                  [datascript "0.13.1"]
                  [sablono "0.5.3"]
                  [cljsjs/react-dom-server "0.14.3-0"]
-                 [org.omcljs/om "1.0.0-alpha28"]
+                 [org.omcljs/om "1.0.0-alpha30"]
                  [figwheel-sidecar "0.5.0-3"]
                  [compojure "1.4.0"]
                  [ring-webjars "0.1.1"]
-                 [org.webjars/bootstrap "4.0.0-alpha.2"]]
+                 [org.webjars/bootstrap "4.0.0-alpha.2"]
+                 [org.webjars/font-awesome "4.5.0"]]
 
   :plugins [[lein-cljsbuild "1.1.1"]]
 

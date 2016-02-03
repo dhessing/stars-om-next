@@ -15,7 +15,8 @@
     [:player/name :db/id])
   Object
   (render [this]
-    (let [{:keys [:player/name :db/id] :as entity} (om/props this)]
+    (let [{:keys [:player/name :db/id]} (om/props this)
+          {:keys [delete]} (om/get-computed this)]
       (html
         [:div.form-group.row
          [:label.form-control-label.col-xs-1 "Player "]
@@ -28,7 +29,7 @@
                            (om/transact! this
                              `[(players/set-name {:db/id ~id :player/name ~(.. e -target -value)})]))}]]
          [:button.btn.btn-danger.col-xs-1
-          ;{:on-click #(om/transact! this `[(player/remove ~props)])}
+          {:on-click (fn [e] (.preventDefault e) (delete))}
           [:i.fa.fa-trash-o.fa-form]]]))))
 
 (def setup-player (om/factory SetupPlayer))
@@ -44,7 +45,10 @@
         [:div
          [:h1 "Players"]
          [:form
-          (map setup-player players)]
+          (for [{:keys [:db/id] :as player} players]
+            (setup-player
+              (om/computed player
+                {:delete (fn [] (om/transact! this `[(players/remove {:db/id ~id})]))})))]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
            {:on-click #(om/transact! this `[(players/add ~entity)])}
@@ -75,7 +79,7 @@
 ;; State
 
 (def conn (d/create-conn {:app/players {:db/cardinality :db.cardinality/many
-                                        :db/valueType :db.type/ref}}))
+                                        :db/valueType   :db.type/ref}}))
 
 (d/transact! conn
   [{:db/id       -1
@@ -89,7 +93,7 @@
 
 (defmethod read :app/stars
   [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector)]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
                  :where [?e :app/title]]
             (d/db state) query)})
@@ -103,6 +107,10 @@
 (defmethod mutate 'players/set-name
   [{:keys [state]} _ entity]
   {:action (fn [] (d/transact! state [entity]))})
+
+(defmethod mutate 'players/remove
+  [{:keys [state]} _ {:keys [:db/id]}]
+  {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
 
 (def reconciler
   (om/reconciler
