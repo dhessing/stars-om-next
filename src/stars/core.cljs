@@ -14,9 +14,17 @@
   (query [this]
     [:player/name :db/id])
   Object
+  (edit-name [this name]
+    (let [{:keys [:db/id]} (om/props this)]
+      (om/transact! this `[(entity/edit {:db/id ~id :player/name ~name})])))
+
+  (remove-player [this]
+    (let [{:keys [:db/id]} (om/props this)
+          {:keys [remove-fn]} (om/get-computed this)]
+      (remove-fn id)))
+
   (render [this]
-    (let [{:keys [:player/name :db/id]} (om/props this)
-          {:keys [delete]} (om/get-computed this)]
+    (let [{:keys [:player/name]} (om/props this)]
       (html
         [:div.form-group.row
          [:label.form-control-label.col-xs-1 "Player "]
@@ -25,11 +33,9 @@
            {:type        "text"
             :placeholder "Name"
             :value       name
-            :on-change   (fn [e]
-                           (om/transact! this
-                             `[(players/set-name {:db/id ~id :player/name ~(.. e -target -value)})]))}]]
-         [:button.btn.btn-danger.col-xs-1
-          {:on-click (fn [e] (.preventDefault e) (delete))}
+            :on-change   #(.edit-name this (.. % -target -value))}]]
+         [:a.btn.btn-danger.col-xs-1
+          {:on-click #(.remove-player this)}
           [:i.fa.fa-trash-o.fa-form]]]))))
 
 (def setup-player (om/factory SetupPlayer))
@@ -39,19 +45,25 @@
   (query [this]
     [:db/id {:app/players (om/get-query SetupPlayer)}])
   Object
+  (remove-player [this id]
+    (om/transact! this `[(entity/remove {:id ~id})]))
+
+  (add-player [this]
+    (let [{:keys [:db/id]} (om/props this)]
+      (om/transact! this `[(app/add-player {:id ~id})])))
+
   (render [this]
-    (let [{:keys [:app/players] :as entity} (om/props this)]
+    (let [{:keys [:app/players]} (om/props this)]
       (html
         [:div
          [:h1 "Players"]
          [:form
-          (for [{:keys [:db/id] :as player} players]
-            (setup-player
-              (om/computed player
-                {:delete (fn [] (om/transact! this `[(players/remove {:db/id ~id})]))})))]
+          (for [player players]
+            (setup-player (om/computed player
+                            {:remove-fn #(.remove-player this %)})))]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
-           {:on-click #(om/transact! this `[(players/add ~entity)])}
+           {:on-click #(.add-player this)}
            "Add Player"]
           [:button.btn.btn-primary
            ;{:on-click #(swap! app-state assoc :screen :game)}
@@ -100,16 +112,16 @@
 
 (defmulti mutate om/dispatch)
 
-(defmethod mutate 'players/add
-  [{:keys [state]} _ {:keys [:db/id] :as entity}]
+(defmethod mutate 'app/add-player
+  [{:keys [state]} _ {:keys [:id]}]
   {:action (fn [] (d/transact! state [{:db/id id :app/players {:player/name ""}}]))})
 
-(defmethod mutate 'players/set-name
+(defmethod mutate 'entity/edit
   [{:keys [state]} _ entity]
   {:action (fn [] (d/transact! state [entity]))})
 
-(defmethod mutate 'players/remove
-  [{:keys [state]} _ {:keys [:db/id]}]
+(defmethod mutate 'entity/remove
+  [{:keys [state]} _ {:keys [:id]}]
   {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
 
 (def reconciler
