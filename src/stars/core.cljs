@@ -10,18 +10,21 @@
 ;; Components
 
 (defui SetupPlayer
+  static om/Ident
+  (ident [this props]
+    {:id (:db/id props)})
   static om/IQuery
   (query [this]
-    [:player/name :db/id])
+    [:db/id :player/name])
   Object
-  (edit-name [this name]
-    (let [{:keys [:db/id]} (om/props this)]
-      (om/transact! this `[(entity/edit {:db/id ~id :player/name ~name})])))
+  (edit [this name]
+    (let [{:keys [:id]} (om/get-ident this)
+          {:keys [:edit-fn]} (om/get-computed (om/props this))]
+      (edit-fn {:db/id id :player/name name})))
 
-  (remove-player [this]
-    (let [{:keys [:db/id]} (om/props this)
-          {:keys [remove-fn]} (om/get-computed this)]
-      (remove-fn id)))
+  (remove [this]
+    (let [{:keys [:remove-fn]} (om/get-computed (om/props this))]
+      (remove-fn (om/get-ident this))))
 
   (render [this]
     (let [{:keys [:player/name]} (om/props this)]
@@ -33,70 +36,85 @@
            {:type        "text"
             :placeholder "Name"
             :value       name
-            :on-change   #(.edit-name this (.. % -target -value))}]]
+            :on-change   #(.edit this (.. % -target -value))}]]
          [:a.btn.btn-danger.col-xs-1
-          {:on-click #(.remove-player this)}
+          {:on-click #(.remove this)}
           [:i.fa.fa-trash-o.fa-form]]]))))
 
 (def setup-player (om/factory SetupPlayer))
 
-(defui SetupScreen
-  static om/IQuery
-  (query [this]
-    [:db/id {:app/players (om/get-query SetupPlayer)}])
+(defui PlayerList
   Object
-  (remove-player [this id]
-    (om/transact! this `[(entity/remove {:id ~id})]))
-
-  (add-player [this]
-    (let [{:keys [:db/id]} (om/props this)]
-      (om/transact! this `[(app/add-player {:id ~id})])))
-
   (render [this]
-    (let [{:keys [:app/players]} (om/props this)]
+    (let [players (om/props this)
+          {:keys [:remove-fn :add-fn :edit-fn]} (om/get-computed (om/props this))]
       (html
         [:div
          [:h1 "Players"]
          [:form
           (for [player players]
             (setup-player (om/computed player
-                            {:remove-fn #(.remove-player this %)})))]
+                            {:remove-fn remove-fn
+                             :edit-fn   edit-fn})))]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
-           {:on-click #(.add-player this)}
+           {:on-click add-fn}
            "Add Player"]
           [:button.btn.btn-primary
            ;{:on-click #(swap! app-state assoc :screen :game)}
            "Done"]]]))))
 
-(def setup-screen (om/factory SetupScreen))
+(def player-list (om/factory PlayerList))
 
 (defui GameScreen
+  static om/IQuery
+  (query [this]
+    [])
   Object
   (render [this]
     (html [:h1 "Game Screen"])))
+
+(def game-screen (om/factory GameScreen))
 
 
 ;; Router
 
 (defui StarsApp
+  static om/Ident
+  (ident [this props]
+    {:id (get-in props [:app/stars :db/id])})
   static om/IQuery
   (query [this]
-    [{:app/stars (om/get-query SetupScreen)}])
+    [{:app/stars [:db/id :app/screen]}
+     {:players (om/get-query SetupPlayer)}])
   Object
+  (remove-player [this id]
+    (om/transact! this `[(entity/remove ~id)]))
+
+  (add-player [this]
+    (om/transact! this `[(app/add-player ~(om/get-ident this))]))
+
+  (edit-player [this entity]
+    (om/transact! this `[(entity/edit ~entity)]))
+
   (render [this]
-    (let [entity (get-in (om/props this) [:app/stars 0])]
-      (setup-screen entity))))
+    (let [{:keys [:app/screen]} (:app/stars (om/props this))]
+      (case screen
+        :setup (player-list
+                 (om/computed (-> this om/props :players)
+                   {:add-fn    #(.add-player this)
+                    :remove-fn #(.remove-player this %)
+                    :edit-fn   #(.edit-player this %)}))))))
 
 ;; State
 
-(def conn (d/create-conn {:app/players {:db/cardinality :db.cardinality/many
+(def conn (d/create-conn {:app/players {:db/isComponent true
+                                        :db/cardinality :db.cardinality/many
                                         :db/valueType   :db.type/ref}}))
 
 (d/transact! conn
-  [{:db/id       -1
-    :app/title   "Stars"
-    :app/screen  SetupScreen
+  [{:app/title   "Stars"
+    :app/screen  :setup
     :app/players [{:player/name "Player 1"}
                   {:player/name "Player 2"}]}])
 
@@ -105,9 +123,17 @@
 
 (defmethod read :app/stars
   [{:keys [state query]} _ _]
+  {:value (first (d/q '[:find [(pull ?e ?selector) ...]
+                        :in $ ?selector
+                        :where [?e :app/title "Stars"]]
+                   (d/db state) query))})
+
+(defmethod read :players
+  [{:keys [state query]} _ _]
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
-                 :where [?e :app/title]]
+                 :where [?app :app/title "Stars"]
+                 [?app :app/players ?e]]
             (d/db state) query)})
 
 (defmulti mutate om/dispatch)
