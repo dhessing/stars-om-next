@@ -40,7 +40,7 @@
   Object
   (render [this]
     (let [players (om/props this)
-          {:keys [:remove-fn :add-fn :edit-fn]} (om/get-computed (om/props this))]
+          {:keys [:remove-fn :add-fn :edit-fn :done-fn]} (om/get-computed (om/props this))]
       (html
         [:div
          [:h1 "Players"]
@@ -54,7 +54,7 @@
            {:on-click add-fn}
            "Add Player"]
           [:button.btn.btn-primary
-           ;{:on-click #(swap! app-state assoc :screen :game)}
+           {:on-click done-fn}
            "Done"]]]))))
 
 (def setup-screen (om/factory SetupScreen))

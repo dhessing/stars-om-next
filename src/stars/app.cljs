@@ -15,9 +15,15 @@
     {:id (get-in props [:app/stars :db/id])})
   static om/IQuery
   (query [this]
-    [{:app/stars [:db/id :app/screen]}
-     {:players (om/get-query SetupItem)}])
+    [{:app/stars [:db/id :app/screen]}])
   Object
+  (componentWillMount [this]
+    (let [{:keys [:app/screen]} (:app/stars (om/props this))]
+      (case screen
+        :setup (om/set-query! this {:query [{:app/stars [:db/id :app/screen]}
+                                            {:players (om/get-query SetupItem)}]})
+        :default #())))
+
   (remove-player [this id]
     (om/transact! this `[(entity/remove ~id)]))
 
@@ -27,6 +33,11 @@
   (edit-player [this entity]
     (om/transact! this `[(entity/edit ~entity)]))
 
+  (done [this]
+    (let [{:keys [:id]} (om/get-ident this)]
+      (om/transact! this `[(entity/edit {:db/id ~id :app/screen :game})])
+      (om/set-query! this {:query [{:app/stars [:db/id :app/screen]}]})))
+
   (render [this]
     (let [{:keys [:app/screen]} (:app/stars (om/props this))]
       (case screen
@@ -34,7 +45,8 @@
                  (om/computed (-> this om/props :players)
                    {:add-fn    #(.add-player this)
                     :remove-fn #(.remove-player this %)
-                    :edit-fn   #(.edit-player this %)}))
+                    :edit-fn   #(.edit-player this %)
+                    :done-fn   #(.done this)}))
         :game (game-screen)))))
 
 (om/add-root! reconciler

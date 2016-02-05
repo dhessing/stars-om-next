@@ -3,9 +3,6 @@
             [sablono.core :as html :refer-macros [html]]))
 
 (defui GameScreen
-  static om/IQuery
-  (query [this]
-    [])
   Object
   (render [this]
     (html [:h1 "Game Screen"])))
