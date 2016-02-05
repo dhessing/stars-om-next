@@ -26,9 +26,9 @@
               [{:id "dev"
                 :source-paths ["src"]
 
-                :figwheel {:on-jsload "stars.core/on-js-reload"}
+                :figwheel {:on-jsload "stars.app/on-js-reload"}
 
-                :compiler {:main stars.core
+                :compiler {:main stars.app
                            :asset-path "js/compiled/out"
                            :output-to "resources/public/js/compiled/stars.js"
                            :output-dir "resources/public/js/compiled/out"
@@ -39,7 +39,7 @@
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/stars.js"
-                           :main stars.core
+                           :main stars.app
                            :optimizations :advanced
                            :pretty-print false}}]}
 
