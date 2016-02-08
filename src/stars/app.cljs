@@ -4,10 +4,14 @@
             [sablono.core :as html :refer-macros [html]]
             [stars.reconciler :refer [reconciler]]
             [stars.parser]
-            [stars.components.setup-screen :refer [SetupItem setup-screen]]
-            [stars.components.game-screen :refer [game-screen]]))
+            [stars.components.setup-screen :refer [SetupScreen setup-screen]]
+            [stars.components.game-screen :refer [GameScreen game-screen]]))
 
 (enable-console-print!)
+
+(def screen->comp
+  {:setup SetupScreen
+   :game GameScreen})
 
 (defui StarsApp
   static om/Ident
@@ -19,10 +23,14 @@
   Object
   (componentWillMount [this]
     (let [{:keys [:app/screen]} (:app/stars (om/props this))]
-      (case screen
-        :setup (om/set-query! this {:query [{:app/stars [:db/id :app/screen]}
-                                            {:players (om/get-query SetupItem)}]})
-        :default #())))
+      (.set-query this screen)))
+
+  (set-query [this screen]
+    (let [comp (screen->comp screen)]
+      (om/set-query! this
+        {:query (vec (concat
+                       [{:app/stars [:db/id :app/screen]}]
+                       (om/get-query comp)))})))
 
   (remove-player [this id]
     (om/transact! this `[(entity/remove ~id)]))
@@ -33,10 +41,8 @@
   (edit-player [this entity]
     (om/transact! this `[(entity/edit ~entity)]))
 
-  (done [this]
-    (let [{:keys [:id]} (om/get-ident this)]
-      (om/transact! this `[(entity/edit {:db/id ~id :app/screen :game})])
-      (om/set-query! this {:query [{:app/stars [:db/id :app/screen]}]})))
+  (set-screen [this screen]
+    (om/transact! this `[(app/screen {:component ~this :screen ~screen})]))
 
   (render [this]
     (let [{:keys [:app/screen]} (:app/stars (om/props this))]
@@ -46,8 +52,10 @@
                    {:add-fn    #(.add-player this)
                     :remove-fn #(.remove-player this %)
                     :edit-fn   #(.edit-player this %)
-                    :done-fn   #(.done this)}))
-        :game (game-screen)))))
+                    :done-fn   #(.set-screen this :game)}))
+        :game (game-screen
+                (om/computed {}
+                  {:done-fn #(.set-screen this :setup)}))))))
 
 (om/add-root! reconciler
   StarsApp (gdom/getElement "app"))

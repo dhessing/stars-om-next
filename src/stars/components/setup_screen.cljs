@@ -37,7 +37,12 @@
 (def setup-item (om/factory SetupItem))
 
 (defui SetupScreen
+  static om/IQuery
+  (query [this]
+    [{:players (om/get-query SetupItem)}])
   Object
+  (add-player [this]
+    (om/transact! this `[(app/add-player {:id 1})]))
   (render [this]
     (let [players (om/props this)
           {:keys [:remove-fn :add-fn :edit-fn :done-fn]} (om/get-computed (om/props this))]

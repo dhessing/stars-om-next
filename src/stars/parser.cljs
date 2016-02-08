@@ -1,5 +1,6 @@
 (ns stars.parser
   (:require [stars.reconciler :refer [read mutate]]
+            [om.next :as om]
             [datascript.core :as d]))
 
 (defmethod read :app/stars
@@ -28,3 +29,9 @@
 (defmethod mutate 'entity/remove
   [{:keys [state]} _ {:keys [:id]}]
   {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
+
+(defmethod mutate 'app/screen
+  [{:keys [state]} _ {:keys [:component :screen]}]
+  {:action (fn [] (do
+                    (.set-query component screen)
+                    (d/transact! state [{:db/id (:id (om/get-ident component)) :app/screen screen}])))})
