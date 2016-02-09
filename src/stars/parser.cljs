@@ -1,5 +1,5 @@
 (ns stars.parser
-  (:require [stars.reconciler :refer [read mutate]]
+  (:require [stars.reconciler :refer [read mutate parser]]
             [datascript.core :as d]))
 
 (defmethod read :app/stars
@@ -16,11 +16,9 @@
                  :where [?e :player/name]]
             (d/db state) query)})
 
-(defmethod read :app/screen-data
+(defmethod read :screen/props
   [{:keys [state query]} _ _]
-  {:value (into {} (for [subquery query
-                         [k v] subquery]
-                     [k (:value (read {:state state :query v} k))]))})
+  {:value (parser {:state state} query)})
 
 (defmethod mutate 'app/add-player
   [{:keys [state]} _ _]

@@ -30,13 +30,13 @@
   (switch-screen [this screen]
     (let [screen-query (or (om/get-query (screen->component screen)) [])]
       (om/set-query! this {:query (into app-query
-                                       [{:app/screen-data screen-query}])})
+                                       [{:screen/props screen-query}])})
       (om/transact! this `[(app/screen {:screen ~screen})])))
 
   (render [this]
     (let [{:keys [:app/screen]} (:app/stars (om/props this))
           screen-factory (screen->factory screen)
-          props (om/computed (:app/screen-data (om/props this))
+          props (om/computed (:screen/props (om/props this))
                   {:switch-fn #(.switch-screen this %)})]
       (screen-factory props))))
 

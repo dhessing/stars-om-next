@@ -6,7 +6,9 @@
 
 (defmulti mutate om/dispatch)
 
+(def parser (om/parser {:read read :mutate mutate}))
+
 (def reconciler
   (om/reconciler
     {:state  conn
-     :parser (om/parser {:read read :mutate mutate})}))
+     :parser parser}))
