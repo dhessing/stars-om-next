@@ -9,7 +9,7 @@
                  [datascript "0.13.1"]
                  [sablono "0.5.3"]
                  [cljsjs/react-dom-server "0.14.3-0"]
-                 [org.omcljs/om "1.0.0-alpha30"]
+                 [org.omcljs/om "1.0.0-alpha31-SNAPSHOT"]
                  [figwheel-sidecar "0.5.0-3"]
                  [compojure "1.4.0"]
                  [ring-webjars "0.1.1"]

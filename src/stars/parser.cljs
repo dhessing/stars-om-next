@@ -6,26 +6,29 @@
   [{:keys [state query]} _ _]
   {:value (first (d/q '[:find [(pull ?e ?selector) ...]
                         :in $ ?selector
-                        :where [?e :app/title "Stars"]]
+                        :where [?e :app/screen]]
                    (d/db state) query))})
 
 (defmethod read :players
   [{:keys [state query]} _ _]
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
-                 :where [?app :app/title "Stars"]
-                 [?app :app/players ?e]]
+                 :where [?e :player/name]]
             (d/db state) query)})
 
 (defmethod read :app/screen-data
   [{:keys [state query]} _ _]
   {:value (into {} (for [subquery query
-                          [k v] subquery]
-                      [k (:value (read {:state state :query v} k))]))})
+                         [k v] subquery]
+                     [k (:value (read {:state state :query v} k))]))})
 
 (defmethod mutate 'app/add-player
-  [{:keys [state]} _ {:keys [:app-id]}]
-  {:action (fn [] (d/transact! state [{:db/id app-id :app/players {:player/name ""}}]))})
+  [{:keys [state]} _ _]
+  {:action (fn [] (d/transact! state [{:player/name ""}]))})
+
+(defmethod mutate 'app/screen
+  [{:keys [state]} _ {:keys [:screen]}]
+  {:action (fn [] (d/transact! state [{:db/id 1 :app/screen screen}]))})
 
 (defmethod mutate 'entity/edit
   [{:keys [state]} _ entity]

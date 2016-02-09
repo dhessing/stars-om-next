@@ -5,13 +5,13 @@
 (defui SetupItem
   static om/Ident
   (ident [this props]
-    {:id (:db/id props)})
+    [:id (:db/id props)])
   static om/IQuery
   (query [this]
     [:db/id :player/name])
   Object
   (edit [this name]
-    (let [{:keys [:id]} (om/get-ident this)
+    (let [[_ id] (om/get-ident this)
           {:keys [:edit-fn]} (om/get-computed (om/props this))]
       (edit-fn {:db/id id :player/name name})))
 
@@ -39,15 +39,13 @@
 (defui SetupScreen
   static om/IQuery
   (query [_]
-    [{:app/stars [:db/id]}
-     {:players (om/get-query SetupItem)}])
+    [{:players (om/get-query SetupItem)}])
   Object
   (remove-player [this id]
     (om/transact! this `[(entity/remove ~id)]))
 
   (add-player [this]
-    (let [id (get-in (om/props this) [:app/stars :db/id])]
-      (om/transact! this `[(app/add-player {:app-id ~id})])))
+    (om/transact! this `[(app/add-player)]))
 
   (edit-player [this entity]
     (om/transact! this `[(entity/edit ~entity)]))
