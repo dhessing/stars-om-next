@@ -38,28 +38,40 @@
 
 (defui SetupScreen
   static om/IQuery
-  (query [this]
-    [{:players (om/get-query SetupItem)}])
+  (query [_]
+    [{:app/stars [:db/id]}
+     {:players (om/get-query SetupItem)}])
   Object
+  (remove-player [this id]
+    (om/transact! this `[(entity/remove ~id)]))
+
   (add-player [this]
-    (om/transact! this `[(app/add-player {:id 1})]))
+    (let [id (get-in (om/props this) [:app/stars :db/id])]
+      (om/transact! this `[(app/add-player {:app-id ~id})])))
+
+  (edit-player [this entity]
+    (om/transact! this `[(entity/edit ~entity)]))
+
+  (done [this]
+    (let [{:keys [:switch-fn]} (om/get-computed (om/props this))]
+      (switch-fn :game)))
+
   (render [this]
-    (let [players (om/props this)
-          {:keys [:remove-fn :add-fn :edit-fn :done-fn]} (om/get-computed (om/props this))]
+    (let [{:keys [:players]} (om/props this)]
       (html
         [:div
          [:h1 "Players"]
          [:form
           (for [player players]
             (setup-item (om/computed player
-                          {:remove-fn remove-fn
-                           :edit-fn   edit-fn})))]
+                          {:remove-fn #(.remove-player this %)
+                           :edit-fn   #(.edit-player this %)})))]
          [:div.btn-toolbar
           [:button.btn.btn-secondary
-           {:on-click add-fn}
+           {:on-click #(.add-player this)}
            "Add Player"]
           [:button.btn.btn-primary
-           {:on-click done-fn}
+           {:on-click #(.done this)}
            "Done"]]]))))
 
 (def setup-screen (om/factory SetupScreen))

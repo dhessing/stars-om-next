@@ -9,9 +9,13 @@
 
 (enable-console-print!)
 
-(def screen->comp
+(def screen->component
   {:setup SetupScreen
-   :game GameScreen})
+   :game  GameScreen})
+
+(def screen->factory
+  {:setup setup-screen
+   :game  game-screen})
 
 (defui StarsApp
   static om/Ident
@@ -19,43 +23,24 @@
     {:id (get-in props [:app/stars :db/id])})
   static om/IQuery
   (query [this]
-    [{:app/stars [:db/id :app/screen]}])
+    [{:app/stars [:db/id :app/screen]}
+     {:app/screen-data (om/get-query (screen->component :setup))}])
   Object
-  (componentWillMount [this]
-    (let [{:keys [:app/screen]} (:app/stars (om/props this))]
-      (.set-query this screen)))
-
-  (set-query [this screen]
-    (let [comp (screen->comp screen)]
+  (switch-screen [this screen]
+    (let [subquery (or (om/get-query (screen->component screen)) [])
+          app-id (:id (om/get-ident this))]
       (om/set-query! this
-        {:query (vec (concat
-                       [{:app/stars [:db/id :app/screen]}]
-                       (om/get-query comp)))})))
-
-  (remove-player [this id]
-    (om/transact! this `[(entity/remove ~id)]))
-
-  (add-player [this]
-    (om/transact! this `[(app/add-player ~(om/get-ident this))]))
-
-  (edit-player [this entity]
-    (om/transact! this `[(entity/edit ~entity)]))
-
-  (set-screen [this screen]
-    (om/transact! this `[(app/screen {:component ~this :screen ~screen})]))
+        {:query [{:app/stars [:db/id :app/screen]}
+                 {:app/screen-data subquery}]})
+      (om/transact! this `[(entity/edit {:db/id ~app-id :app/screen ~screen})])))
 
   (render [this]
-    (let [{:keys [:app/screen]} (:app/stars (om/props this))]
-      (case screen
-        :setup (setup-screen
-                 (om/computed (-> this om/props :players)
-                   {:add-fn    #(.add-player this)
-                    :remove-fn #(.remove-player this %)
-                    :edit-fn   #(.edit-player this %)
-                    :done-fn   #(.set-screen this :game)}))
-        :game (game-screen
-                (om/computed {}
-                  {:done-fn #(.set-screen this :setup)}))))))
+    (let [{:keys [:app/screen]} (:app/stars (om/props this))
+          {:keys [:app/screen-data]} (om/props this)]
+      (let [screen-factory (screen->factory screen)
+            props (om/computed (or screen-data {})
+                    {:switch-fn #(.switch-screen this %)})]
+        (screen-factory props)))))
 
 (om/add-root! reconciler
   StarsApp (gdom/getElement "app"))
