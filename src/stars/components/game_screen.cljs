@@ -1,6 +1,8 @@
 (ns stars.components.game-screen
   (:require [om.next :as om :refer-macros [defui]]
-            [sablono.core :as html :refer-macros [html]]))
+            [sablono.core :as html :refer-macros [html]])
+  (:require-macros
+    [devcards.core :refer [defcard]]))
 
 (def tile->points
   {21 1
@@ -23,15 +25,17 @@
 (defui Tile
   Object
   (render [this]
-    (html
-      (if-let [value (om/props this)]
-        (let [points (tile->points value)]
+    (if-let [value (om/props this)]
+      (let [points (tile->points value)]
+        (html
           [:button.btn.btn-secondary.tile {:disabled true}
            [:div.tile-top value]
-           [:div.tile-bottom (repeat points [:i.fa.fa-star])]])
-        [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}]))))
+           [:div.tile-bottom
+            (for [i (range points)]
+              [:i.fa.fa-star {:key i}])]]))
+      (html [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}]))))
 
-(def tile (om/factory Tile))
+(def tile (om/factory Tile {:keyfn identity}))
 
 (defui PlayerCard
   static om/IQuery
@@ -75,3 +79,10 @@
           [:div.card-block]]]))))
 
 (def game-screen (om/factory GameScreen))
+
+(defcard tiles
+  "List of all the tiles"
+  (html [:div.btn-toolbar (map (partial tile) (sort (keys tile->points)))]))
+
+(defcard nil-tile
+  (tile nil))

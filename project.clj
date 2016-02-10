@@ -6,6 +6,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
+                 [devcards "0.2.1-6"]
                  [datascript "0.13.1"]
                  [sablono "0.5.3"]
                  [cljsjs/react-dom-server "0.14.3-0"]
@@ -23,25 +24,33 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :cljsbuild {:builds
-              [{:id "dev"
+              [{:id           "dev"
                 :source-paths ["src"]
 
-                :figwheel {:on-jsload "stars.app/on-js-reload"}
+                :figwheel     {:on-jsload "stars.app/on-js-reload"}
 
-                :compiler {:main stars.app
-                           :asset-path "js/compiled/out"
-                           :output-to "resources/public/js/compiled/stars.js"
-                           :output-dir "resources/public/js/compiled/out"
-                           :source-map-timestamp true}}
+                :compiler     {:main                 stars.app
+                               :asset-path           "js/compiled/out"
+                               :output-to            "resources/public/js/compiled/stars.js"
+                               :output-dir           "resources/public/js/compiled/out"
+                               :source-map-timestamp true}}
+               {:id           "devcards"
+                :source-paths ["src"]
+                :figwheel     {:devcards true}
+                :compiler     {:main                 stars.app
+                               :asset-path           "js/compiled/devcards_out"
+                               :output-to            "resources/public/js/compiled/stars_devcards.js"
+                               :output-dir           "resources/public/js/compiled/devcards_out"
+                               :source-map-timestamp true}}
                ;; This next build is an compressed minified build for
                ;; production. You can build this with:
                ;; lein cljsbuild once min
-               {:id "min"
+               {:id           "min"
                 :source-paths ["src"]
-                :compiler {:output-to "resources/public/js/compiled/stars.js"
-                           :main stars.app
-                           :optimizations :advanced
-                           :pretty-print false}}]}
+                :compiler     {:output-to     "resources/public/js/compiled/stars.js"
+                               :main          stars.app
+                               :optimizations :advanced
+                               :pretty-print  false}}]}
 
   :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
              ;; :server-port 3449 ;; default
