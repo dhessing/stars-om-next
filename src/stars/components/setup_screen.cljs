@@ -3,21 +3,19 @@
             [sablono.core :as html :refer-macros [html]]))
 
 (defui SetupItem
-  static om/Ident
-  (ident [this props]
-    [:id (:db/id props)])
   static om/IQuery
   (query [this]
-    [:db/id :player/name])
+    [:db/id :type :player/name])
   Object
   (edit [this name]
-    (let [[_ id] (om/get-ident this)
+    (let [{:keys [:db/id]} (om/props this)
           {:keys [:edit-fn]} (om/get-computed (om/props this))]
       (edit-fn {:db/id id :player/name name})))
 
   (remove [this]
-    (let [{:keys [:remove-fn]} (om/get-computed (om/props this))]
-      (remove-fn (om/get-ident this))))
+    (let [{:keys [:db/id]} (om/props this)
+          {:keys [:remove-fn]} (om/get-computed (om/props this))]
+      (remove-fn {:id id})))
 
   (render [this]
     (let [{:keys [:player/name]} (om/props this)]
@@ -36,26 +34,34 @@
 
 (def setup-item (om/factory SetupItem))
 
+(defn game-player [i {:keys [:player/name]}]
+  (let [name (if (empty? name) (str "Player " (inc i)) name)]
+    {:type         :game/player
+     :player/name  name}))
+
 (defui SetupScreen
   static om/IQuery
   (query [_]
-    [{:players (om/get-query SetupItem)}])
+    [{:setup/players (om/get-query SetupItem)}])
   Object
   (remove-player [this id]
-    (om/transact! this `[(entity/remove ~id)]))
+    (om/transact! this `[(setup/remove-player ~id)]))
 
   (add-player [this]
-    (om/transact! this `[(app/add-player)]))
+    (om/transact! this `[(setup/add-player)]))
 
   (edit-player [this entity]
-    (om/transact! this `[(entity/edit ~entity)]))
+    (om/transact! this `[(setup/edit-player ~entity)]))
 
   (done [this]
-    (let [{:keys [:switch-fn]} (om/get-computed (om/props this))]
+    (let [{:keys [:switch-fn]} (om/get-computed (om/props this))
+          {:keys [:setup/players]} (om/props this)
+          players (map-indexed game-player players)]
+      (om/transact! this `[(game/start {:players ~players})])
       (switch-fn :game)))
 
   (render [this]
-    (let [{:keys [:players]} (om/props this)]
+    (let [{:keys [:setup/players]} (om/props this)]
       (html
         [:div
          [:h1 "Players"]

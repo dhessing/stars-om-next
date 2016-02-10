@@ -6,33 +6,54 @@
   [{:keys [state query]} _ _]
   {:value (first (d/q '[:find [(pull ?e ?selector) ...]
                         :in $ ?selector
-                        :where [?e :app/screen]]
+                        :where [?e :type :app]]
                    (d/db state) query))})
-
-(defmethod read :players
-  [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector) ...]
-                 :in $ ?selector
-                 :where [?e :player/name]]
-            (d/db state) query)})
 
 (defmethod read :screen/props
   [{:keys [state query]} _ _]
   {:value (parser {:state state} query)})
 
-(defmethod mutate 'app/add-player
-  [{:keys [state]} _ _]
-  {:action (fn [] (d/transact! state [{:player/name ""}]))})
+(defmethod read :game/players
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?app :app/game ?e]
+                 [?e :type :game/player]]
+            (d/db state) query)})
+
+(defmethod read :setup/players
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?e :type :setup/player]]
+            (d/db state) query)})
+
+(defmethod read :tiles/available
+  [{:keys [state query]} _ _]
+  {:value (d/q '[:find [(pull ?e ?selector) ...]
+                 :in $ ?selector
+                 :where [?e :type :tile]]
+            (d/db state) query)})
+
 
 (defmethod mutate 'app/screen
   [{:keys [state]} _ {:keys [:screen]}]
   {:action (fn [] (d/transact! state [{:db/id 1 :app/screen screen}]))})
 
-(defmethod mutate 'entity/edit
+(defmethod mutate 'setup/add-player
+  [{:keys [state]} _ _]
+  {:action (fn [] (d/transact! state [{:type :setup/player :player/name ""}]))})
+
+(defmethod mutate 'setup/edit-player
   [{:keys [state]} _ entity]
   {:action (fn [] (d/transact! state [entity]))})
 
-(defmethod mutate 'entity/remove
+(defmethod mutate 'setup/remove-player
   [{:keys [state]} _ {:keys [:id]}]
   {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
+
+(defmethod mutate 'game/start
+  [{:keys [state]} _ {:keys [:players]}]
+  {:action (fn [] (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
+                                      {:db/id 1 :app/game players}]))})
 

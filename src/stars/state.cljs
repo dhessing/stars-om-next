@@ -1,13 +1,25 @@
 (ns stars.state
   (:require [datascript.core :as d]))
 
+(def schema
+  {:app/game     {:db/isComponent true
+                  :db/valueType   :db.type/ref
+                  :db/cardinality :db.cardinality/many}
+   :player/tiles {:db/isComponent true
+                  :db/valueType   :db.type/ref
+                  :db/cardinality :db.cardinality/many}})
+
 (def initial-state
-  [{:app/screen :setup}
+  [{:db/id      -1
+    :type       :app
+    :app/screen :setup}
 
-   {:player/name "Player 1"}
+   {:type        :setup/player
+    :player/name ""}
 
-   {:player/name "Player 2"}])
+   {:type        :setup/player
+    :player/name ""}])
 
-(def conn (d/create-conn {}))
+(def conn (d/create-conn schema))
 
 (d/transact! conn initial-state)
