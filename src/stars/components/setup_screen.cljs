@@ -1,11 +1,13 @@
 (ns stars.components.setup-screen
   (:require [om.next :as om :refer-macros [defui]]
-            [sablono.core :as html :refer-macros [html]]))
+            [sablono.core :as html :refer-macros [html]])
+  (:require-macros
+    [devcards.core :refer [defcard]]))
 
 (defui SetupItem
   static om/IQuery
   (query [this]
-    [:db/id :type :player/name])
+    [:db/id :player/name])
   Object
   (edit [this name]
     (let [{:keys [:db/id]} (om/props this)
@@ -15,10 +17,11 @@
   (remove [this]
     (let [{:keys [:db/id]} (om/props this)
           {:keys [:remove-fn]} (om/get-computed (om/props this))]
-      (remove-fn {:id id})))
+      (some-> remove-fn (apply {:id id}))))
 
   (render [this]
-    (let [{:keys [:player/name]} (om/props this)]
+    (let [{:keys [:player/name]} (om/props this)
+          {:keys [:edit-fn]} (om/get-computed this)]
       (html
         [:div.form-group.row
          [:label.form-control-label.col-xs-1 "Player "]
@@ -27,17 +30,32 @@
            {:type        "text"
             :placeholder "Name"
             :value       name
-            :on-change   #(.edit this (.. % -target -value))}]]
+            :on-change   (when edit-fn
+                           #(.edit this (.. % -target -value)))}]]
          [:a.btn.btn-danger.col-xs-1
           {:on-click #(.remove this)}
           [:i.fa.fa-trash-o.fa-form]]]))))
 
-(def setup-item (om/factory SetupItem))
+(def setup-item (om/factory SetupItem {:keyfn :db/id}))
+
+(defui SetupList
+  Object
+  (render [this]
+    (let [players (om/props this)
+          {:keys [:remove-fn :edit-fn]} (om/get-computed this)]
+      (html
+        [:form
+         (for [player players]
+           (setup-item (om/computed player
+                         {:remove-fn remove-fn
+                          :edit-fn   edit-fn})))]))))
+
+(def setup-list (om/factory SetupList))
 
 (defn game-player [i {:keys [:player/name]}]
   (let [name (if (empty? name) (str "Player " (inc i)) name)]
-    {:type         :game/player
-     :player/name  name}))
+    {:type        :game/player
+     :player/name name}))
 
 (defui SetupScreen
   static om/IQuery
@@ -65,11 +83,9 @@
       (html
         [:div
          [:h1 "Players"]
-         [:form
-          (for [player players]
-            (setup-item (om/computed player
-                          {:remove-fn #(.remove-player this %)
-                           :edit-fn   #(.edit-player this %)})))]
+         (setup-list (om/computed players
+                       {:edit-fn   #(.edit-player this %)
+                        :remove-fn #(.remove-player this %)}))
          [:div.btn-toolbar
           [:button.btn.btn-secondary
            {:on-click #(.add-player this)}
@@ -79,3 +95,21 @@
            "Done"]]]))))
 
 (def setup-screen (om/factory SetupScreen))
+
+
+(defcard
+  "### Setup list with 2 players"
+  (fn [props _] (setup-list @props))
+  [{:db/id 1 :player/name "Player 1"}
+   {:db/id 2 :player/name "Player 2"}]
+  {:inspect-data true})
+
+(defcard
+  "### Behaviour")
+
+(defcard
+  "### Setup item with edit callback"
+  (fn [state _] (setup-item (om/computed @state
+                              {:edit-fn #(reset! state %)})))
+  {:db/id 1 :player/name "Player 1"}
+  {:inspect-data true :history true})
