@@ -53,7 +53,11 @@
   {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
 
 (defmethod mutate 'game/start
-  [{:keys [state]} _ {:keys [:players]}]
-  {:action (fn [] (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
-                                      {:db/id 1 :app/game players}]))})
+  [{:keys [state]} _ {:keys [:names]}]
+  {:action (fn []
+             (let [players (for [name names]
+                             {:type        :game/player
+                              :player/name name})]
+               (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
+                                   {:db/id 1 :app/game players}])))})
 
