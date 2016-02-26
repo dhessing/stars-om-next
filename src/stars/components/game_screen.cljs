@@ -1,88 +1,68 @@
 (ns stars.components.game-screen
   (:require [om.next :as om :refer-macros [defui]]
-            [sablono.core :as html :refer-macros [html]])
-  (:require-macros
-    [devcards.core :refer [defcard]]))
+            [sablono.core :as html :refer-macros [html]]
+            [stars.constants :as c])
+  (:require-macros [devcards.core :refer [defcard]]))
 
-(def tile->points
-  {21 1
-   22 1
-   23 1
-   24 1
-   25 2
-   26 2
-   27 2
-   28 2
-   29 3
-   30 3
-   31 3
-   32 3
-   33 4
-   34 4
-   35 4
-   36 4})
+(defn tile-button [value]
+  (html
+    [:button.btn.btn-secondary.tile {:key value :disabled true}
+     [:div.tile-top value]
+     [:div.tile-bottom
+      (for [i (range (c/tiles value))]
+        [:i.fa.fa-star {:key i}])]]))
 
-(defui Tile
-  Object
-  (render [this]
-    (if-let [value (om/props this)]
-      (let [points (tile->points value)]
-        (html
-          [:button.btn.btn-secondary.tile {:disabled true}
-           [:div.tile-top value]
-           [:div.tile-bottom
-            (for [i (range points)]
-              [:i.fa.fa-star {:key i}])]]))
-      (html [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}]))))
+(defn die-button [face]
+  [:button.btn.btn-secondary.die
+   (if (= face "*") [:i.fa.fa-star] face)])
 
-(def tile (om/factory Tile {:keyfn identity}))
+(defn roll-button []
+  [:button.btn.btn-primary.stars-btn "Roll"])
 
-(defui PlayerCard
-  static om/IQuery
-  (query [this]
-    [:player/name :player/tiles])
-  Object
-  (render [this]
-    (let [{:keys [:player/name :player/tiles]} (om/props this)]
-      (html
-        [:div.card
-         [:div.card-header name]
-         [:div.card-block
-          (tile (:value (first tiles)))]]))))
-
-(def player-card (om/factory PlayerCard))
 
 (defui GameScreen
   static om/IQuery
   (query [this]
-    [{:game/players (om/get-query PlayerCard)}
-     {:tiles/available []}])
+    [{:game/players [:db/id :player/name :player/tiles]}
+     :tiles/available])
+
   Object
   (done [this]
     (let [{:keys [:switch-fn]} (om/get-computed (om/props this))]
       (switch-fn :setup)))
 
   (render [this]
-    (let [{:keys [:game/players]} (om/props this)]
+    (let [{:keys [:game/players :tiles/available]} (om/props this)]
       (html
         [:div
          [:div.card-deck-wrapper
           [:div.card-deck.m-b-1
-           (for [player players]
-             (player-card player))]]
+           (for [{:keys [:db/id :player/name :player/tiles]} players]
+             [:div.card {:key id}
+              [:div.card-header name]
+              [:div.card-block
+               (if (seq? tiles)
+                 (tile-button (first tiles))
+                 [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}])]])]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar
-            (for [value (range 21 37)]
-              (tile value))]]]
+            (for [tile available]
+              (tile-button tile))]]]
          [:div.card
-          [:div.card-block]]]))))
+          [:div.card-block
+           [:div.btn-toolbar.m-b-1
+            (die-button 5)
+            (die-button 5)
+            (die-button 5)
+            (die-button 5)
+            (die-button 5)
+            (die-button 5)
+            (roll-button)]
+           [:div.btn-toolbar.m-b-1
+            (die-button "*")
+            (die-button "*")
+            (die-button "*")]
+           [:p "Total: 15"]]]]))))
 
 (def game-screen (om/factory GameScreen))
-
-(defcard tiles
-  "List of all the tiles"
-  (html [:div.btn-toolbar (map (partial tile) (sort (keys tile->points)))]))
-
-(defcard nil-tile
-  (tile nil))

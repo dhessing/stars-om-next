@@ -5,9 +5,8 @@
   {:app/game     {:db/isComponent true
                   :db/valueType   :db.type/ref
                   :db/cardinality :db.cardinality/many}
-   :player/tiles {:db/isComponent true
-                  :db/valueType   :db.type/ref
-                  :db/cardinality :db.cardinality/many}})
+   :player/tiles {:db/cardinality :db.cardinality/many}
+   :tile/value   {:db/unique      :db.unique/identity}})
 
 (def initial-state
   [{:db/id      -1

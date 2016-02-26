@@ -1,6 +1,7 @@
 (ns stars.parser
   (:require [stars.reconciler :refer [read mutate parser]]
-            [datascript.core :as d]))
+            [datascript.core :as d]
+            [stars.constants :as c]))
 
 (defmethod read :app/stars
   [{:keys [state query]} _ _]
@@ -17,8 +18,7 @@
   [{:keys [state query]} _ _]
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
-                 :where [?app :app/game ?e]
-                 [?e :type :game/player]]
+                 :where [?e :type :game/player]]
             (d/db state) query)})
 
 (defmethod read :setup/players
@@ -30,11 +30,14 @@
 
 (defmethod read :tiles/available
   [{:keys [state query]} _ _]
-  {:value (d/q '[:find [(pull ?e ?selector) ...]
-                 :in $ ?selector
-                 :where [?e :type :tile]]
-            (d/db state) query)})
-
+  {:value (let [picked (d/q '[:find [?t ...]
+                              :in $ ?selector
+                              :where [?e :type :game/player]
+                              [?e :player/tiles ?t]]
+                         (d/db state) query)]
+            (clojure.set/difference
+              (apply sorted-set (keys c/tiles))
+              picked))})
 
 (defmethod mutate 'app/screen
   [{:keys [state]} _ {:keys [:screen]}]
@@ -54,10 +57,10 @@
 
 (defmethod mutate 'game/start
   [{:keys [state]} _ {:keys [:names]}]
-  {:action (fn []
-             (let [players (for [name names]
-                             {:type        :game/player
-                              :player/name name})]
-               (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
-                                   {:db/id 1 :app/game players}])))})
+  (let [name->player (fn [name] {:type         :game/player
+                                 :player/name  name
+                                 :player/tiles '()})
+        players (map name->player names)]
+    {:action (fn [] (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
+                                        {:db/id 1 :app/game players}]))}))
 
