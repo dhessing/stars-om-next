@@ -4,6 +4,7 @@
             [stars.constants :as c])
   (:require-macros [devcards.core :refer [defcard]]))
 
+
 (defn tile-button [value]
   (html
     [:button.btn.btn-secondary.tile {:key value :disabled true}
@@ -12,27 +13,29 @@
       (for [i (range (c/tiles value))]
         [:i.fa.fa-star {:key i}])]]))
 
-(defn die-button [face]
-  [:button.btn.btn-secondary.die
-   (if (= face "*") [:i.fa.fa-star] face)])
-
-(defn roll-button []
-  [:button.btn.btn-primary.stars-btn "Roll"])
+(defn die-button [key face]
+  [:button.btn.btn-secondary.die {:key key}
+   (if (= face :*) [:i.fa.fa-star] face)])
 
 
 (defui GameScreen
   static om/IQuery
   (query [this]
     [{:game/players [:db/id :player/name :player/tiles]}
-     :tiles/available])
+     :tiles/available
+     :dice/roll
+     :dice/chosen])
 
   Object
   (done [this]
     (let [{:keys [:switch-fn]} (om/get-computed (om/props this))]
       (switch-fn :setup)))
 
+  (roll [this]
+    (om/transact! this '[(turn/roll)]))
+
   (render [this]
-    (let [{:keys [:game/players :tiles/available]} (om/props this)]
+    (let [{:keys [:game/players :tiles/available :dice/roll :dice/chosen]} (om/props this)]
       (html
         [:div
          [:div.card-deck-wrapper
@@ -52,17 +55,10 @@
          [:div.card
           [:div.card-block
            [:div.btn-toolbar.m-b-1
-            (die-button 5)
-            (die-button 5)
-            (die-button 5)
-            (die-button 5)
-            (die-button 5)
-            (die-button 5)
-            (roll-button)]
+            (map-indexed die-button roll)
+            [:button.btn.btn-primary.stars-btn {:on-click #(.roll this)} "Roll"]]
            [:div.btn-toolbar.m-b-1
-            (die-button "*")
-            (die-button "*")
-            (die-button "*")]
-           [:p "Total: 15"]]]]))))
+            (map-indexed die-button chosen)]
+           [:p (str "Total: " (apply + chosen))]]]]))))
 
 (def game-screen (om/factory GameScreen))

@@ -25,7 +25,8 @@
   [{:keys [state query]} _ _]
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
-                 :where [?e :type :setup/player]]
+                 :where
+                 [?e :type :setup/player]]
             (d/db state) query)})
 
 (defmethod read :tiles/available
@@ -38,6 +39,24 @@
             (clojure.set/difference
               (apply sorted-set (keys c/tiles))
               picked))})
+
+(defmethod read :dice/roll
+  [{:keys [state query]} _ _]
+  {:value (first (d/q '[:find [?d]
+                  :in $ ?selector
+                  :where
+                  [1 :app/game ?g]
+                  [?g :game/roll ?d]]
+             (d/db state) query))})
+
+(defmethod read :dice/chosen
+  [{:keys [state query]} _ _]
+  {:value (first (d/q '[:find [?d]
+                        :in $ ?selector
+                        :where
+                        [1 :app/game ?g]
+                        [?g :game/chosen ?d]]
+                   (d/db state) query))})
 
 (defmethod mutate 'app/screen
   [{:keys [state]} _ {:keys [:screen]}]
@@ -55,6 +74,11 @@
   [{:keys [state]} _ {:keys [:id]}]
   {:action (fn [] (d/transact! state [[:db.fn/retractEntity id]]))})
 
+(defmethod mutate 'turn/roll
+  [{:keys [state]} _ _]
+  {:action (fn [] (d/transact! state [{:db/id    1
+                                       :app/game {:game/roll (repeatedly 8 #(rand-nth [1 2 3 4 5 :*]))}}]))})
+
 (defmethod mutate 'game/start
   [{:keys [state]} _ {:keys [:names]}]
   (let [name->player (fn [name] {:type         :game/player
@@ -62,5 +86,7 @@
                                  :player/tiles '()})
         players (map name->player names)]
     {:action (fn [] (d/transact! state [[:db.fn/retractAttribute 1 :app/game]
-                                        {:db/id 1 :app/game players}]))}))
+                                        {:db/id    1
+                                         :app/game {:type         :game
+                                                    :game/players players}}]))}))
 
