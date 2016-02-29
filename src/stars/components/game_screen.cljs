@@ -22,9 +22,8 @@
   static om/IQuery
   (query [this]
     [{:game/players [:db/id :player/name :player/tiles]}
-     :tiles/available
-     :dice/roll
-     :dice/chosen])
+     {:turn [:turn/roll :turn/chosen]}
+     :game/tiles-available])
 
   Object
   (done [this]
@@ -35,7 +34,8 @@
     (om/transact! this '[(turn/roll)]))
 
   (render [this]
-    (let [{:keys [:game/players :tiles/available :dice/roll :dice/chosen]} (om/props this)]
+    (let [{:keys [:game/players :turn :game/tiles-available]} (om/props this)
+          {:keys [:turn/roll :turn/chosen]} turn]
       (html
         [:div
          [:div.card-deck-wrapper
@@ -50,7 +50,7 @@
          [:div.card
           [:div.card-block
            [:div.btn-toolbar
-            (for [tile available]
+            (for [tile tiles-available]
               (tile-button tile))]]]
          [:div.card
           [:div.card-block
