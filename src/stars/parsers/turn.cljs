@@ -11,12 +11,14 @@
 
 (defmethod mutate 'turn/roll
   [{:keys [state]} _ {:keys [dice]}]
-  {:action (fn [] (d/transact! state [{:db/id     [:db/ident :turn]
-                                       :turn/roll (apply hash-map (flatten (map-indexed vector (repeatedly 8 #(rand-nth [1 2 3 4 5 :*])))))}]))})
+  {:action (fn [] (d/transact! state [{:db/id      [:db/ident :turn]
+                                       :turn/roll  (apply hash-map (flatten (map-indexed vector (repeatedly dice #(rand-nth [1 2 3 4 5 :*])))))
+                                       :turn/phase :pick}]))})
 
 (defmethod mutate 'turn/pick
   [{:keys [state]} _ {:keys [:face :roll :chosen]}]
   (let [new-chosen (filter #(= (second %) face) roll)]
     {:action (fn [] (d/transact! state [{:db/id       [:db/ident :turn]
                                          :turn/roll   (apply dissoc roll (map first new-chosen))
-                                         :turn/chosen (concat chosen (map second new-chosen))}]))}))
+                                         :turn/chosen (concat chosen (map second new-chosen))
+                                         :turn/phase  :roll}]))}))

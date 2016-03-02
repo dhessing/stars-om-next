@@ -5,9 +5,10 @@
   (:require-macros [devcards.core :refer [defcard]]))
 
 
-(defn tile-button [value]
+(defn tile-button [value props]
   (html
-    [:button.btn.btn-secondary.tile {:key value :disabled true}
+    [:button.btn.btn-secondary.tile
+     (merge {:key value} props)
      [:div.tile-top value]
      [:div.tile-bottom
       (for [i (range (c/tiles value))]
@@ -25,7 +26,7 @@
   static om/IQuery
   (query [this]
     [{:game/players [:db/id :player/name :player/tiles]}
-     {:turn [:turn/roll :turn/chosen]}
+     {:turn [:turn/roll :turn/chosen :turn/phase]}
      :game/tiles-available])
 
   Object
@@ -43,7 +44,7 @@
 
   (render [this]
     (let [{:keys [:game/players :turn :game/tiles-available]} (om/props this)
-          {:keys [:turn/roll :turn/chosen]} turn]
+          {:keys [:turn/roll :turn/chosen :turn/phase]} turn]
       (html
         [:div
          [:div.card-deck-wrapper
@@ -52,26 +53,34 @@
              [:div.card {:key id}
               [:div.card-header name]
               [:div.card-block
-               (if (seq? tiles)
-                 (tile-button (first tiles))
+               (if-let [tile (first tiles)]
+                 (tile-button tile
+                              {:disabled (or (not= phase :roll)
+                                             (= (sum-faces chosen) tile))})
                  [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}])]])]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar
             (for [tile tiles-available]
-              (tile-button tile))]]]
+              (tile-button tile {:disabled (or (not= phase :roll)
+                                               (< (sum-faces chosen) tile))}))]]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar.m-b-1
             (for [[i face] roll]
               (die-button {:key           i
+                           :disabled      (or (not= phase :pick)
+                                              (some (partial = face) chosen))
                            :class         (when (= (om/get-state this) face) "active")
                            :on-click      #(do (.pick this face)
                                                (om/set-state! this :nil))
                            :on-mouse-over #(om/set-state! this face)
                            :on-mouse-out  #(om/set-state! this :nil)}
-                face))
-            [:button.btn.btn-primary.stars-btn {:on-click #(.roll this)} "Roll"]]
+                          face))
+            [:button.btn.btn-primary.stars-btn
+             {:on-click #(.roll this)
+              :disabled (not= phase :roll)}
+             "Roll"]]
            [:div.btn-toolbar.m-b-1
             (for [[i face] (map-indexed vector chosen)]
               (die-button {:key i :disabled true} face))]
