@@ -43,12 +43,14 @@
     (let [{:keys [:turn/roll :turn/chosen]} (:turn (om/props this))]
       (om/transact! this `[(turn/pick {:face ~face :roll ~roll :chosen ~chosen})])))
 
+  (pick-tile [this tile]
+    (om/transact! this `[(turn/pick-tile {:tile ~tile})
+                         (turn/end)]))
+
   (lose-tile [this]
-    (let [{:keys [:turn/current-player]} (:turn (om/props this))
-          {:keys [:game/players]} (om/props this)
-          next-player (second (drop-while (partial not= (:db/id current-player)) (map :db/id (cycle players))))]
+    (let [{:keys [:turn/current-player]} (:turn (om/props this))]
       (om/transact! this `[(turn/lose-tile {:player ~current-player})
-                           (turn/end {:next-player ~next-player})])))
+                           (turn/end)])))
 
   (render [this]
     (let [{:keys [:game/players :turn :game/tiles-available]} (om/props this)
@@ -72,7 +74,8 @@
           [:div.card-block
            [:div.btn-toolbar
             (for [tile tiles-available]
-              (tile-button tile {:disabled (or (not= phase :roll)
+              (tile-button tile {:on-click #(.pick-tile this tile)
+                                 :disabled (or (not= phase :roll)
                                                (< (sum-faces chosen) tile)
                                                (not-any? (partial = :*) chosen))}))]]]
          [:div.card

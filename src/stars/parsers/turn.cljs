@@ -2,6 +2,13 @@
   (:require [stars.reconciler :refer [read mutate parser]]
             [datascript.core :as d]))
 
+(defmethod read :current-player
+  [{:keys [state query]} _ _]
+  {:value (first (d/q '[:find [(pull ?e ?selector)]
+                        :in $ ?selector
+                        :where [_ :turn/current-player ?e]]
+                      (d/db state) query))})
+
 (defmethod read :turn
   [{:keys [state query]} _ _]
   {:value (first (d/q '[:find [(pull ?e ?selector) ...]
@@ -34,9 +41,23 @@
                                            :player/tiles (rest tiles)}])))}))
 
 (defmethod mutate 'turn/end
-  [{:keys [state]} _ {:keys [next-player]}]
-  {:action (fn [] (d/transact! state [{:db/id               [:db/ident :turn]
-                                       :turn/roll           []
-                                       :turn/chosen         []
-                                       :turn/phase          :roll
-                                       :turn/current-player next-player}]))})
+  [{:keys [state]} _ _]
+  (let [query '[{:current-player [:db/id]}
+                {:game/players [:db/id]}]
+        {:keys [:current-player :game/players]} (parser {:state state} query)
+        player-id (:db/id current-player)
+        player-ids (map :db/id players)
+        next-player (second (drop-while (partial not= player-id) player-ids))]
+    {:action (fn [] (d/transact! state [{:db/id               [:db/ident :turn]
+                                         :turn/roll           []
+                                         :turn/chosen         []
+                                         :turn/phase          :roll
+                                         :turn/current-player next-player}]))}))
+
+(defmethod mutate 'turn/pick-tile
+  [{:keys [state]} _ {:keys [tile]}]
+  (let [query '[{:current-player [:db/id :player/tiles]}]
+        {:keys [:db/id :player/tiles]} (:current-player (parser {:state state} query))
+        tiles (conj (or tiles '()) tile)]
+    {:action (fn [] (d/transact! state [{:db/id        id
+                                         :player/tiles tiles}]))}))
