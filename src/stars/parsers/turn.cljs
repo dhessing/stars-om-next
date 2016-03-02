@@ -34,9 +34,9 @@
                                            :player/tiles (rest tiles)}])))}))
 
 (defmethod mutate 'turn/end
-  [{:keys [state]} _ {:keys [current-id player-ids]}]
+  [{:keys [state]} _ {:keys [next-player]}]
   {:action (fn [] (d/transact! state [{:db/id               [:db/ident :turn]
                                        :turn/roll           []
                                        :turn/chosen         []
                                        :turn/phase          :roll
-                                       :turn/current-player (second (drop-while (partial not= current-id) (cycle player-ids)))}]))})
+                                       :turn/current-player next-player}]))})

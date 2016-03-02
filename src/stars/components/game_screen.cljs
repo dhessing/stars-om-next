@@ -45,10 +45,10 @@
 
   (lose-tile [this]
     (let [{:keys [:turn/current-player]} (:turn (om/props this))
-          {:keys [:game/players]} (om/props this)]
+          {:keys [:game/players]} (om/props this)
+          next-player (second (drop-while (partial not= (:db/id current-player)) (map :db/id (cycle players))))]
       (om/transact! this `[(turn/lose-tile {:player ~current-player})
-                           (turn/end {:current-id ~(:db/id current-player)
-                                      :player-ids    ~(map :db/id players)})])))
+                           (turn/end {:next-player ~next-player})])))
 
   (render [this]
     (let [{:keys [:game/players :turn :game/tiles-available]} (om/props this)
@@ -65,14 +65,16 @@
                (if-let [tile (first tiles)]
                  (tile-button tile
                               {:disabled (or (not= phase :roll)
-                                             (= (sum-faces chosen) tile))})
+                                             (= (sum-faces chosen) tile)
+                                             (not-any? (partial = :*) chosen))})
                  [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}])]])]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar
             (for [tile tiles-available]
               (tile-button tile {:disabled (or (not= phase :roll)
-                                               (< (sum-faces chosen) tile))}))]]]
+                                               (< (sum-faces chosen) tile)
+                                               (not-any? (partial = :*) chosen))}))]]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar.m-b-1
