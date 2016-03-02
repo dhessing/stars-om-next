@@ -29,4 +29,5 @@
         players (map name->player names)]
     {:action (fn [] (d/transact! state [{:db/id     1
                                          :app/state players}
-                                        {:db/ident :turn}]))}))
+                                        {:db/ident :turn
+                                         :turn/chosen []}]))}))
