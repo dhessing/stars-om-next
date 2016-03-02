@@ -22,11 +22,12 @@
                :turn/chosen [:* :* :*]}]}
 
 (def schema
-  {:db/ident     {:db/unique :db.unique/identity}
-   :app/state    {:db/isComponent true
-                  :db/valueType   :db.type/ref
-                  :db/cardinality :db.cardinality/many}
-   :player/tiles {:db/cardinality :db.cardinality/many}})
+  {:db/ident            {:db/unique :db.unique/identity}
+   :app/state           {:db/isComponent true
+                         :db/valueType   :db.type/ref
+                         :db/cardinality :db.cardinality/many}
+   :player/tiles        {:db/cardinality :db.cardinality/many}
+   :turn/current-player {:db/valueType :db.type/ref}})
 
 (def initial-state
   [{:db/ident   :app

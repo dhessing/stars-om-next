@@ -26,7 +26,8 @@
   static om/IQuery
   (query [this]
     [{:game/players [:db/id :player/name :player/tiles]}
-     {:turn [:turn/roll :turn/chosen :turn/phase]}
+     {:turn [:turn/roll :turn/chosen :turn/phase
+             {:turn/current-player [:db/id :player/tiles]}]}
      :game/tiles-available])
 
   Object
@@ -36,21 +37,29 @@
 
   (roll [this]
     (let [chosen (get-in (om/props this) [:turn :turn/chosen])]
-      (om/transact! this `[(turn/roll {:dice ~(- 8 (count chosen))})])))
+      (om/transact! this `[(turn/roll {:chosen ~chosen})])))
 
   (pick [this face]
     (let [{:keys [:turn/roll :turn/chosen]} (:turn (om/props this))]
       (om/transact! this `[(turn/pick {:face ~face :roll ~roll :chosen ~chosen})])))
 
+  (lose-tile [this]
+    (let [{:keys [:turn/current-player]} (:turn (om/props this))
+          {:keys [:game/players]} (om/props this)]
+      (om/transact! this `[(turn/lose-tile {:player ~current-player})
+                           (turn/end {:current-id ~(:db/id current-player)
+                                      :player-ids    ~(map :db/id players)})])))
+
   (render [this]
     (let [{:keys [:game/players :turn :game/tiles-available]} (om/props this)
-          {:keys [:turn/roll :turn/chosen :turn/phase]} turn]
+          {:keys [:turn/roll :turn/chosen :turn/phase :turn/current-player]} turn]
       (html
         [:div
          [:div.card-deck-wrapper
           [:div.card-deck.m-b-1
            (for [{:keys [:db/id :player/name :player/tiles]} players]
-             [:div.card {:key id}
+             [:div.card {:key   id
+                         :style (when (= (:db/id current-player) id) {:borderColor "#333"})}
               [:div.card-header name]
               [:div.card-block
                (if-let [tile (first tiles)]
@@ -68,19 +77,26 @@
           [:div.card-block
            [:div.btn-toolbar.m-b-1
             (for [[i face] roll]
-              (die-button {:key           i
-                           :disabled      (or (not= phase :pick)
-                                              (some (partial = face) chosen))
-                           :class         (when (= (om/get-state this) face) "active")
-                           :on-click      #(do (.pick this face)
-                                               (om/set-state! this :nil))
-                           :on-mouse-over #(om/set-state! this face)
-                           :on-mouse-out  #(om/set-state! this :nil)}
-                          face))
+              (let [disabled (or (not= phase :pick)
+                                 (some (partial = face) chosen))]
+                (die-button {:key           i
+                             :disabled      disabled
+                             :class         (when (= (om/get-state this) face) "active")
+                             :on-click      #(do (.pick this face)
+                                                 (om/set-state! this :nil))
+                             :on-mouse-over #(when (not disabled) (om/set-state! this face))
+                             :on-mouse-out  #(when (not disabled) (om/set-state! this :nil))}
+                            face)))
             [:button.btn.btn-primary.stars-btn
              {:on-click #(.roll this)
               :disabled (not= phase :roll)}
              "Roll"]]
+           (when (= phase :dead)
+             [:div.m-b-1
+              [:p "You died"]
+              [:button.btn.btn-primary
+               {:on-click #(.lose-tile this)}
+               "Next Player"]])
            [:div.btn-toolbar.m-b-1
             (for [[i face] (map-indexed vector chosen)]
               (die-button {:key i :disabled true} face))]

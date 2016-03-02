@@ -8,7 +8,7 @@
   {:value (d/q '[:find [(pull ?e ?selector) ...]
                  :in $ ?selector
                  :where [?e :type :game/player]]
-            (d/db state) query)})
+               (d/db state) query)})
 
 (defmethod read :game/tiles-available
   [{:keys [state query]} _ _]
@@ -16,19 +16,20 @@
                               :in $ ?selector
                               :where [?e :type :game/player]
                               [?e :player/tiles ?t]]
-                         (d/db state) query)]
+                            (d/db state) query)]
             (clojure.set/difference
               (apply sorted-set (keys c/tiles))
               picked))})
 
 (defmethod mutate 'game/start
   [{:keys [state]} _ {:keys [:names]}]
-  (let [name->player (fn [name] {:type         :game/player
-                                 :player/name  name
-                                 :player/tiles '()})
+  (let [name->player (fn [name] {:db/id        (d/tempid :db.part/user)
+                                 :type         :game/player
+                                 :player/name  name})
         players (map name->player names)]
     {:action (fn [] (d/transact! state [{:db/id     1
                                          :app/state players}
-                                        {:db/ident    :turn
-                                         :turn/chosen []
-                                         :turn/phase  :roll}]))}))
+                                        {:db/ident            :turn
+                                         :turn/chosen         []
+                                         :turn/phase          :roll
+                                         :turn/current-player (:db/id (first players))}]))}))
