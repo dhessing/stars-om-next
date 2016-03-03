@@ -47,7 +47,7 @@
         {:keys [:current-player :game/players]} (parser {:state state} query)
         player-id (:db/id current-player)
         player-ids (map :db/id players)
-        next-player (second (drop-while (partial not= player-id) player-ids))]
+        next-player (second (drop-while (partial not= player-id) (cycle player-ids)))]
     {:action (fn [] (d/transact! state [{:db/id               [:db/ident :turn]
                                          :turn/roll           []
                                          :turn/chosen         []
@@ -60,4 +60,13 @@
         {:keys [:db/id :player/tiles]} (:current-player (parser {:state state} query))
         tiles (conj (or tiles '()) tile)]
     {:action (fn [] (d/transact! state [{:db/id        id
+                                         :player/tiles tiles}]))}))
+
+(defmethod mutate 'turn/steal-tile
+  [{:keys [state]} _ {:keys [player]}]
+  (let [query '[{:current-player [:db/id :player/tiles]}]
+        {:keys [:db/id :player/tiles]} (:current-player (parser {:state state} query))
+        tiles (conj (or tiles '()) (first (:player/tiles player)))]
+    {:action (fn [] (d/transact! state [(update player :player/tiles rest)
+                                        {:db/id        id
                                          :player/tiles tiles}]))}))

@@ -2,7 +2,7 @@
   (:require [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [sablono.core :as html :refer-macros [html]]
-            [stars.reconciler :refer [reconciler]]
+            [stars.reconciler :as reconciler :refer [reconciler]]
             [stars.parser]
             [stars.components.setup-screen :refer [SetupScreen setup-screen]]
             [stars.components.game-screen :refer [GameScreen game-screen]]))

@@ -43,6 +43,10 @@
     (let [{:keys [:turn/roll :turn/chosen]} (:turn (om/props this))]
       (om/transact! this `[(turn/pick {:face ~face :roll ~roll :chosen ~chosen})])))
 
+  (steal-tile [this player]
+    (om/transact! this `[(turn/steal-tile {:player ~player})
+                         (turn/end)]))
+
   (pick-tile [this tile]
     (om/transact! this `[(turn/pick-tile {:tile ~tile})
                          (turn/end)]))
@@ -59,25 +63,27 @@
         [:div
          [:div.card-deck-wrapper
           [:div.card-deck.m-b-1
-           (for [{:keys [:db/id :player/name :player/tiles]} players]
+           (for [{:keys [:db/id :player/name :player/tiles] :as player} players]
              [:div.card {:key   id
                          :style (when (= (:db/id current-player) id) {:borderColor "#333"})}
               [:div.card-header name]
               [:div.card-block
                (if-let [tile (first tiles)]
                  (tile-button tile
-                              {:disabled (or (not= phase :roll)
-                                             (= (sum-faces chosen) tile)
-                                             (not-any? (partial = :*) chosen))})
+                              {:on-click #(.steal-tile this player)
+                               :disabled (not (and (= phase :roll)
+                                                   (= (sum-faces chosen) tile)
+                                                   (some (partial = :*) chosen)
+                                                   (not= (:db/id current-player) (:db/id player))))})
                  [:button.btn.btn-secondary.tile.tile-nothing {:disabled true}])]])]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar
             (for [tile tiles-available]
               (tile-button tile {:on-click #(.pick-tile this tile)
-                                 :disabled (or (not= phase :roll)
-                                               (< (sum-faces chosen) tile)
-                                               (not-any? (partial = :*) chosen))}))]]]
+                                 :disabled (not (and (= phase :roll)
+                                                     (<= tile (sum-faces chosen))
+                                                     (some (partial = :*) chosen)))}))]]]
          [:div.card
           [:div.card-block
            [:div.btn-toolbar.m-b-1

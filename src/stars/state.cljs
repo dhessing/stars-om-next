@@ -26,7 +26,6 @@
    :app/state           {:db/isComponent true
                          :db/valueType   :db.type/ref
                          :db/cardinality :db.cardinality/many}
-   :player/tiles        {:db/cardinality :db.cardinality/many}
    :turn/current-player {:db/valueType :db.type/ref}})
 
 (def initial-state
