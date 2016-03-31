@@ -1,25 +1,25 @@
 (ns stars.state
   (:require [datascript.core :as d]))
 
-{:db/ident   :app
- :app/screen :game
- :app/state  [{:type        :setup/player
-               :player/name ""}
-
-              {:type        :setup/player
-               :player/name ""}
-
-              {:type         :game/player
-               :player/name  "Player 1"
-               :player/tiles [21 23]}
-
-              {:type         :game/player
-               :player/name  "Player 2"
-               :player/tiles [22]}
-
-              {:db/ident    :turn
-               :turn/roll   [1 2 3 4 5]
-               :turn/chosen [:* :* :*]}]}
+;{:db/ident   :app
+; :app/screen :game
+; :app/state  [{:type        :setup/player
+;               :player/name ""}
+;
+;              {:type        :setup/player
+;               :player/name ""}
+;
+;              {:type         :game/player
+;               :player/name  "Player 1"
+;               :player/tiles [21 23]}
+;
+;              {:type         :game/player
+;               :player/name  "Player 2"
+;               :player/tiles [22]}
+;
+;              {:db/ident    :turn
+;               :turn/roll   [1 2 3 4 5]
+;               :turn/chosen [:* :* :*]}]}
 
 (def schema
   {:db/ident            {:db/unique :db.unique/identity}

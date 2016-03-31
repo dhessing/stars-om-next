@@ -5,17 +5,20 @@
             [stars.reconciler :as reconciler :refer [reconciler]]
             [stars.parser]
             [stars.components.setup-screen :refer [SetupScreen setup-screen]]
-            [stars.components.game-screen :refer [GameScreen game-screen]]))
+            [stars.components.game-screen :refer [GameScreen game-screen]]
+            [stars.components.score-screen :refer [ScoreScreen score-screen]]))
 
 (enable-console-print!)
 
 (def screen->component
   {:setup SetupScreen
-   :game  GameScreen})
+   :game  GameScreen
+   :score ScoreScreen})
 
 (def screen->factory
   {:setup setup-screen
-   :game  game-screen})
+   :game  game-screen
+   :score score-screen})
 
 (def app-query [{:app/stars [:app/screen]}])
 

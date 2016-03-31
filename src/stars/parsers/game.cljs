@@ -10,6 +10,16 @@
                  :where [?e :type :game/player]]
                (d/db state) query)})
 
+(defmethod read :scoring/players
+  [{:keys [state query]} _ _]
+  (let [players (d/q '[:find [(pull ?e ?selector) ...]
+                       :in $ ?selector
+                       :where [?e :type :game/player]]
+                     (d/db state) query)]
+    {:value (for [{:keys [:player/tiles] :as player} players
+                  :let [score (apply + (map c/tiles tiles))]]
+              (assoc player :player/score score))}))
+
 (defmethod read :game/tiles-available
   [{:keys [state query]} _ _]
   {:value (let [picked (flatten (d/q '[:find [?t ...]

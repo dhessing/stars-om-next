@@ -31,9 +31,14 @@
      :game/tiles-available])
 
   Object
+  (componentWillUpdate [this next-props next-state]
+    (let [{:keys [:game/tiles-available]} next-props]
+      (when (empty? tiles-available)
+        (.done this))))
+
   (done [this]
     (let [{:keys [:switch-fn]} (om/get-computed (om/props this))]
-      (switch-fn :setup)))
+      (switch-fn :score)))
 
   (roll [this]
     (let [chosen (get-in (om/props this) [:turn :turn/chosen])]
